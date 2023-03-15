@@ -1,5 +1,6 @@
 from NFA_lab import *
-
+from collections import Counter
+import copy
 # Identify available symbols
 class FDA(object):
 
@@ -13,7 +14,7 @@ class FDA(object):
         else:
             dicc = {elem: [] for elem in list(elements)}
         
-        return dicc
+        return dict(sorted(dicc.items()))
 
     def epsilon_recursive(self, table, init_origin, i):
         for j in transitions.sub_transitions:
@@ -94,9 +95,58 @@ class FDA(object):
                     if trans_table[t] == afd_table[i][e][0]:
                         afd_table[i][e][0] = t
                     
-        print('all_states',all_states)
-        print('afd_table',afd_table)
+        # print('all_states',all_states)
+        # print('afd_table',afd_table)
+        return all_states, afd_table
 
+    def min_table(self, afd_table, sub_table):
+        # Change values to new set values
+        
+        minTable = copy.deepcopy(afd_table)
+        for i in afd_table:
+            for k in afd_table[i]:
+                for j in range(len(sub_table)):
+                    if afd_table[i][k][0] in sub_table[j]:
+                        minTable[i][k][0] = j
+        # Finds set's mode
+        index_mc = ''
+        most_common = 0
+        for i in sub_table[0]:
+            ax = 0
+            for j in sub_table[0]:
+                if minTable[i] == minTable[j]:
+                    ax += 1
+            if ax > most_common:
+                most_common = ax
+                index_mc = i
+        
+        new_set = []
+        for i in sub_table[0]:
+                if minTable[i] != minTable[index_mc]:
+                    new_set.append(i)
+                    sub_table.insert(1,new_set)
+        for i in new_set:
+            sub_table[0].remove(i)
+        return sub_table, minTable
+
+    def minimize_afd(self):
+        all_states, afd_table = self.subConstruct(transitions, acc_st)
+        acceptance = len(all_states)-1
+        active = True
+        initial = [list(range(acceptance))]
+        initial.append([acceptance])
+        # print(initial)
+        
+        flag = 0
+        while active:
+            initial, minTable = self.min_table(afd_table, initial)
+            if flag == len(initial):
+                break
+            else:
+                flag = len(initial)
+        print(initial, minTable)
+                
+                
     def dstates_recursive(self, table, dstate_table, fp, index, sym_list):
         new_states = []
         aux_dstates = []
@@ -223,7 +273,9 @@ class FDA(object):
                 dstates_table[fp][i] = dstates.index(stt)
                 
         
-        print(dstates_table)
+        return dstates_table
+
+
 
 
 re_list = ['(a|b)*abb#']
@@ -244,7 +296,6 @@ nfa.thompson(postfix)
 # states, nodes, transitions, etc. NFA in a nutshell
 transitions = nfa.get_transitions()
 acc_st = nfa.get_acceptance_state()+1
-
-# fda.subConstruct(transitions, acc_st)
-fda.regular_toAFD(postfix_fda)
+fda.minimize_afd()
+# fda.regular_toAFD(postfix_fda)
         
