@@ -1,5 +1,5 @@
 from NFA_lab import *
-from collections import Counter
+import networkx as nx
 import copy
 # Identify available symbols
 class FDA(object):
@@ -94,9 +94,16 @@ class FDA(object):
                 for t in trans_table:
                     if trans_table[t] == afd_table[i][e][0]:
                         afd_table[i][e][0] = t
+        
                     
         # print('all_states',all_states)
         # print('afd_table',afd_table)
+        
+        for i in afd_table:
+            for e in afd_table[i]:
+                new = afd_table[i][e][0]
+                afd_table[i][e] = new
+        
         return all_states, afd_table
 
     def min_table(self, afd_table, sub_table):
@@ -106,8 +113,8 @@ class FDA(object):
         for i in afd_table:
             for k in afd_table[i]:
                 for j in range(len(sub_table)):
-                    if afd_table[i][k][0] in sub_table[j]:
-                        minTable[i][k][0] = j
+                    if afd_table[i][k] in sub_table[j]:
+                        minTable[i][k] = j
         # Finds set's mode
         index_mc = ''
         most_common = 0
@@ -127,6 +134,7 @@ class FDA(object):
                     sub_table.insert(1,new_set)
         for i in new_set:
             sub_table[0].remove(i)
+        
         return sub_table, minTable
 
     def minimize_afd(self):
@@ -144,9 +152,15 @@ class FDA(object):
                 break
             else:
                 flag = len(initial)
-        print(initial, minTable)
-                
-                
+        
+        mini = {}
+        for i in range(len(initial)):
+            mini[i] = {} # mini = {0:{}, 1:{}, 2:{}, 3:{}}
+            for j in list(minTable[0].keys()):
+                 mini[i][j] = minTable[initial[i][0]][j]  # mini = {0:{'a':x, 'b':y}, 1:{...}, 2:{...}, 3:{...}}
+
+        return mini
+                          
     def dstates_recursive(self, table, dstate_table, fp, index, sym_list):
         new_states = []
         aux_dstates = []
@@ -275,7 +289,35 @@ class FDA(object):
         
         return dstates_table
 
-
+    def graph(self, dicc):
+        
+        G = nx.DiGraph()
+        
+        for i in dicc:
+            for j in dicc[i]:
+                G.add_node(i)
+                G.add_node(dicc[i][j])
+                # Agregar una transición del nodo 0 al nodo 1 con el símbolo 'a'
+                G.add_edge(i, dicc[i][j], label=j)
+        
+        pos = nx.spring_layout(G)
+        nx.draw_networkx_nodes(G, pos)
+        nx.draw_networkx_edges(G, pos)
+        nx.draw_networkx_edge_labels(G, pos)
+        nx.draw_networkx_labels(G, pos)
+        plt.show()
+            
+    def afd_simulation(self, w, dicc):
+        
+        initial_state = 0
+        s = initial_state
+        final_state = len(dicc)-1
+        for c in w:
+            s = dicc[s][c]
+        if s == final_state:
+            return 'PASS'
+        else:
+            return 'FAIL'
 
 
 re_list = ['(a|b)*abb#']
@@ -296,6 +338,19 @@ nfa.thompson(postfix)
 # states, nodes, transitions, etc. NFA in a nutshell
 transitions = nfa.get_transitions()
 acc_st = nfa.get_acceptance_state()+1
-fda.minimize_afd()
-# fda.regular_toAFD(postfix_fda)
-        
+a,b = fda.subConstruct(transitions, acc_st)
+w = 'aabb'
+
+print('-----------------------------------------------------------')
+print('Subconstruction DFA Set →',b)
+print('W =',w,' → Simulation Status:',fda.afd_simulation(w,b))
+print('-----------------------------------------------------------')
+fda.graph(b)
+print('Subconstruction DFA Set Minimized →',fda.minimize_afd())
+print('W =',w,' → Simulation Status:',fda.afd_simulation(w,fda.minimize_afd()))
+print('-----------------------------------------------------------')
+fda.graph(fda.minimize_afd())
+print('Direct FDA Construction →',fda.regular_toAFD(postfix_fda))
+print('W =',w,' → Simulation Status:',fda.afd_simulation(w,fda.regular_toAFD(postfix_fda)))
+print('-----------------------------------------------------------')
+fda.graph(fda.regular_toAFD(postfix_fda))
