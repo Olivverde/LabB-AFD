@@ -126,7 +126,6 @@ class Libs(object):
         stack = []
         formattedRegEx = self.formatRegEx(regex)
         for c in formattedRegEx:
-            print
             if c == '(':
                 stack.append(c)
             elif c == ')':
@@ -456,7 +455,7 @@ class NFA(object):
                 
             # print('Init Node: ',trans.transitions[ind].sub_transitions[i].local_init_node.id)
             # print('End Node: ',trans.transitions[ind].sub_transitions[i].local_end_node.id)
-            # print(str(init_dg)+' → ('+str(elem_dg)+') → '+str(end_dg)+',')
+            print(str(init_dg)+' → ('+str(elem_dg)+') → '+str(end_dg)+',')
             
             
             # Agregar dos nodos al gráfico
@@ -480,12 +479,12 @@ class NFA(object):
         
         
         
-        # pos = nx.spring_layout(G)
-        # nx.draw_networkx_nodes(G, pos)
-        # nx.draw_networkx_edges(G, pos)
-        # nx.draw_networkx_edge_labels(G, pos)
-        # nx.draw_networkx_labels(G, pos)
-        # plt.show()
+        pos = nx.spring_layout(G)
+        nx.draw_networkx_nodes(G, pos)
+        nx.draw_networkx_edges(G, pos)
+        nx.draw_networkx_edge_labels(G, pos)
+        nx.draw_networkx_labels(G, pos)
+        plt.show()
 
     def get_transitions(self):
         return self.AFN_transitions
@@ -499,6 +498,18 @@ class NFA(object):
     def set_acceptance_state(self, state):
         self.acceptance_state = state
 
-        
     def get_acceptance_state(self):
         return self.acceptance_state
+    
+    def get_standarized_trans(self):
+        stand_trans = {}
+        struct = self.get_transitions()
+        for i in range(len(struct.sub_transitions)):
+            init_dg = struct.sub_transitions[i].local_init_node.id            
+            end_dg = struct.sub_transitions[i].local_end_node.id
+            elem_dg = struct.sub_transitions[i].trans_element
+            if not init_dg in stand_trans:
+                stand_trans[init_dg] = {}
+            stand_trans[init_dg][end_dg] = elem_dg 
+            
+        return stand_trans

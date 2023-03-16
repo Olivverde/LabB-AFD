@@ -4,6 +4,9 @@ import copy
 # Identify available symbols
 class FDA(object):
 
+    def __init__(self) -> None:
+        self.epsilon_initial_table = {}
+
     def table_template(self, transitions, dicc=True):
         char = ''
         elements = set()
@@ -71,6 +74,7 @@ class FDA(object):
         # Generate AFD states table
         states_list = self.table_template(transitions.sub_transitions, False)
         states_list.pop('ε')
+        self.epsilon_initial_table = copy.deepcopy(table)
         initial_list = table[0]['ε']
 
         afd_table = {}
@@ -319,28 +323,59 @@ class FDA(object):
         else:
             return 'FAIL'
 
+    def afn_simulation(self, w):
+        
+        epsilon_table = self.epsilon_initial_table
+        F = len(epsilon_table)-1
+        s = epsilon_table[0]['ε']
+        ax = []
+        ax2 = []
+        
+        for c in w:
+            for i in s:
+                e = epsilon_table[i][c]
+                if isinstance(e,int):
+                    ax.append(epsilon_table[i][c])
+            for j in ax:
+                ax2 = list(set(ax2) | set(epsilon_table[j]['ε']))
+            s = ax2
+            ax = []
+            ax2 = []
+        if F in s:
+            return 'PASS'
+        else:
+            return 'FAIL' 
 
-re_list = ['(a|b)*abb#']
-re = re_list[0]
+r = ['(a|b)*abb']
+q = 0
+re_list = {'basic':r[q], 'regular':r[q]+'#'}
+re = re_list['basic']
 
 lib = Libs(re)
 postfix = lib.get_postfix()
-# print('---------------------------')
-# print('TRADUCCION:',lib.get_printable_trans())
-# print('POSTFIX:',lib.get_printable_postfix())
-# print('---------------------------')
+print('---------------------------')
+print('TRADUCCION:',lib.get_printable_trans())
+print('POSTFIX:',lib.get_printable_postfix())
+print('---------------------------')
 
 nfa = NFA()
 fda = FDA()
-postfix = 'ab|*a.b.b.'
+
 postfix_fda = 'ab|*a.b.b.#.'
+
+w = 'aabb'
 nfa.thompson(postfix)
+
 # states, nodes, transitions, etc. NFA in a nutshell
 transitions = nfa.get_transitions()
 acc_st = nfa.get_acceptance_state()+1
 a,b = fda.subConstruct(transitions, acc_st)
-w = 'aabb'
-
+print('NFA')
+print('-----------------------------------------------------------')
+print('NFA set →',nfa.get_standarized_trans())
+print('W =',w,' → Simulation Status:',fda.afn_simulation(w))
+print('-----------------------------------------------------------')
+print('FDA')
 print('-----------------------------------------------------------')
 print('Subconstruction DFA Set →',b)
 print('W =',w,' → Simulation Status:',fda.afd_simulation(w,b))
