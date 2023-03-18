@@ -117,7 +117,11 @@ class Libs(object):
                 res += c1
             
             if (c1 != '(') and (c2 != ')') and (c2 not in allOperators) and (c1 not in binaryOperators):
-                res += '.'
+                try:
+                    if res[-1] != '.':
+                        res += '.'
+                except:
+                    pass
         res += regex[len(regex)-1]
         return res
 
@@ -513,3 +517,4 @@ class NFA(object):
             stand_trans[init_dg][end_dg] = elem_dg 
             
         return stand_trans
+

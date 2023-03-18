@@ -86,7 +86,7 @@ class FDA(object):
             states_list = (self.state_recursive(table, states_list, i))
             for k in states_list:
                 for j in states_list[k]:
-                    if not j in all_states:
+                    if not j in all_states and len(j) != 0:
                         all_states.append(j)
             afd_table[states_cont] = states_list
             states_list = self.table_template(transitions.sub_transitions, False)
@@ -107,12 +107,10 @@ class FDA(object):
             for e in afd_table[i]:
                 new = afd_table[i][e][0]
                 afd_table[i][e] = new
-        
         return all_states, afd_table
 
     def min_table(self, afd_table, sub_table):
         # Change values to new set values
-        
         minTable = copy.deepcopy(afd_table)
         for i in afd_table:
             for k in afd_table[i]:
@@ -132,13 +130,17 @@ class FDA(object):
                 index_mc = i
         
         new_set = []
+        aux = []
         for i in sub_table[0]:
-                if minTable[i] != minTable[index_mc]:
-                    new_set.append(i)
-                    sub_table.insert(1,new_set)
+            
+            if minTable[i] != minTable[index_mc]:
+                new_set.append(i)
+                sub_table.insert(1,new_set)
+                aux.append(i)
+                new_set = []
+        new_set = aux  
         for i in new_set:
             sub_table[0].remove(i)
-        
         return sub_table, minTable
 
     def minimize_afd(self):
@@ -148,7 +150,6 @@ class FDA(object):
         initial = [list(range(acceptance))]
         initial.append([acceptance])
         # print(initial)
-        
         flag = 0
         while active:
             initial, minTable = self.min_table(afd_table, initial)
@@ -156,13 +157,12 @@ class FDA(object):
                 break
             else:
                 flag = len(initial)
-        
         mini = {}
         for i in range(len(initial)):
             mini[i] = {} # mini = {0:{}, 1:{}, 2:{}, 3:{}}
             for j in list(minTable[0].keys()):
                  mini[i][j] = minTable[initial[i][0]][j]  # mini = {0:{'a':x, 'b':y}, 1:{...}, 2:{...}, 3:{...}}
-
+        self.initial = initial
         return mini
                           
     def dstates_recursive(self, table, dstate_table, fp, index, sym_list):
@@ -174,7 +174,8 @@ class FDA(object):
                 if table[j]['symbol'] == i: 
                     aux_dstates = list(set(aux_dstates) | set(table[j]['followpos']))
             dstate_table[index][i] = aux_dstates
-            new_states.append(aux_dstates)
+            if len(aux_dstates) != 0:
+                new_states.append(aux_dstates)
             aux_dstates = []
         
         return dstate_table, new_states
@@ -225,11 +226,11 @@ class FDA(object):
                 else:
                     regular_table[e]['lastpos'] = regular_table[c2]['lastpos']
 
-                for i in regular_table[c1]['lastpos']:
+                for k in regular_table[c1]['lastpos']:
                     first_c2 = regular_table[c2]['firstpos']
-                    follow_i = regular_table[i]['followpos']
+                    follow_i = regular_table[k]['followpos']
                     union = list(set(follow_i)|set(first_c2))
-                    regular_table[i]['followpos'] = union
+                    regular_table[k]['followpos'] = union
                 
             elif e == '|':
                 
@@ -248,12 +249,11 @@ class FDA(object):
                 regular_table[e]['firstpos'] = regular_table[c1]['firstpos']
                 regular_table[e]['lastpos'] = regular_table[c1]['lastpos']
                 
-                for i in regular_table[e]['lastpos']:
+                for k in regular_table[e]['lastpos']:
                     first_n = regular_table[e]['firstpos']
-                    follow_i = regular_table[i]['followpos']
+                    follow_i = regular_table[k]['followpos']
                     union = list(set(follow_i)|set(first_n))
-                    regular_table[i]['followpos'] = union
-                
+                    regular_table[k]['followpos'] = union
             else:  
                 sym = e
                 e = index[i]
@@ -266,6 +266,9 @@ class FDA(object):
                     regular_table[e]['lastpos'].append(e)
                     regular_table[e]['symbol'] = sym  
         
+            
+        
+        # Get all available symbols
         sym_set = set()
         for inner_dicc in regular_table.values():
             symbol = inner_dicc.get("symbol")
@@ -278,8 +281,10 @@ class FDA(object):
         dstates_table = {}
         new_states = []
         for fp in dstates:
-            fp_ind = dstates.index(fp)
-            dstates_table, new_states = self.dstates_recursive(regular_table, dstates_table, fp, fp_ind, sym_list)
+            
+            if len(fp) != 0:
+                fp_ind = dstates.index(fp)
+                dstates_table, new_states = self.dstates_recursive(regular_table, dstates_table, fp, fp_ind, sym_list)
             
             for ns in new_states:
                 if not ns in dstates:
@@ -288,21 +293,22 @@ class FDA(object):
         for i in sym_list:
             for fp in dstates_table:
                 stt = dstates_table[fp][i]
-                dstates_table[fp][i] = dstates.index(stt)
+                if len(stt) != 0:
+                    dstates_table[fp][i] = dstates.index(stt)
                 
         
         return dstates_table
 
     def graph(self, dicc):
-        
         G = nx.DiGraph()
         
         for i in dicc:
             for j in dicc[i]:
                 G.add_node(i)
-                G.add_node(dicc[i][j])
-                # Agregar una transición del nodo 0 al nodo 1 con el símbolo 'a'
-                G.add_edge(i, dicc[i][j], label=j)
+                if isinstance(dicc[i][j], int):
+                    G.add_node(dicc[i][j])
+                    # Agregar una transición del nodo 0 al nodo 1 con el símbolo 'a'
+                    G.add_edge(i, dicc[i][j], label=j)
         
         pos = nx.spring_layout(G)
         nx.draw_networkx_nodes(G, pos)
@@ -312,12 +318,14 @@ class FDA(object):
         plt.show()
             
     def afd_simulation(self, w, dicc):
-        
         initial_state = 0
         s = initial_state
         final_state = len(dicc)-1
         for c in w:
-            s = dicc[s][c]
+            try:
+                s = dicc[s][c]
+            except:
+                return 'FAIL'
         if s == final_state:
             return 'PASS'
         else:
@@ -346,13 +354,15 @@ class FDA(object):
         else:
             return 'FAIL' 
 
-r = ['(a|b)*abb']
+r = ['ab*ab*']
 q = 0
 re_list = {'basic':r[q], 'regular':r[q]+'#'}
 re = re_list['basic']
-
+re_r = re_list['regular']
 lib = Libs(re)
+lib_r = Libs(re_r)
 postfix = lib.get_postfix()
+postfix_r = lib_r.get_postfix()
 print('---------------------------')
 print('TRADUCCION:',lib.get_printable_trans())
 print('POSTFIX:',lib.get_printable_postfix())
@@ -360,8 +370,6 @@ print('---------------------------')
 
 nfa = NFA()
 fda = FDA()
-
-postfix_fda = 'ab|*a.b.b.#.'
 
 w = 'aabb'
 nfa.thompson(postfix)
@@ -381,11 +389,12 @@ print('Subconstruction DFA Set →',b)
 print('W =',w,' → Simulation Status:',fda.afd_simulation(w,b))
 print('-----------------------------------------------------------')
 fda.graph(b)
-print('Subconstruction DFA Set Minimized →',fda.minimize_afd())
+print('Subconstruction DFA Set Minimized →',fda.minimize_afd(),'States',fda.initial)
 print('W =',w,' → Simulation Status:',fda.afd_simulation(w,fda.minimize_afd()))
 print('-----------------------------------------------------------')
 fda.graph(fda.minimize_afd())
-print('Direct FDA Construction →',fda.regular_toAFD(postfix_fda))
-print('W =',w,' → Simulation Status:',fda.afd_simulation(w,fda.regular_toAFD(postfix_fda)))
+print('Regular Postfix:',postfix_r)
+print('Direct FDA Construction →',fda.regular_toAFD(postfix_r))
+print('W =',w,' → Simulation Status:',fda.afd_simulation(w,fda.regular_toAFD(postfix_r)))
 print('-----------------------------------------------------------')
-fda.graph(fda.regular_toAFD(postfix_fda))
+fda.graph(fda.regular_toAFD(postfix_r))
