@@ -64,9 +64,9 @@ class FDA(object):
     # Transition Table Template
         table = self.table_template(transitions.sub_transitions)
         table = {i: table.copy() for i in range(acc_st)}
+        
         for state in table.copy():
             table[state]['ε'] = [state]
-
         # Generate AFD transitions table
         for i in range(acc_st):
             self.epsilon_recursive(table, None, i)
@@ -321,6 +321,7 @@ class FDA(object):
         initial_state = 0
         s = initial_state
         final_state = len(dicc)-1
+        w = self.w_translation(w)
         for c in w:
             try:
                 s = dicc[s][c]
@@ -331,6 +332,24 @@ class FDA(object):
         else:
             return 'FAIL'
 
+
+    def w_translation(self,r):
+        l = Libs()
+        translation = []
+        exp = [char for char in r]
+        for e in exp:
+            if e == '.':
+                    l.dicc['ϰ'] = e
+                    e = 'ϰ'
+                    translation.append(e)
+            elif e == 'ε' or e == '':
+                    l.dicc['ϕ'] = e
+                    e = 'ϕ'
+                    translation.append(e)
+        string = ''.join(translation)
+        
+        return string
+    
     def afn_simulation(self, w):
         
         epsilon_table = self.epsilon_initial_table
@@ -339,6 +358,7 @@ class FDA(object):
         ax = []
         ax2 = []
         
+        w = self.w_translation(w)
         for c in w:
             for i in s:
                 e = epsilon_table[i][c]
@@ -354,8 +374,14 @@ class FDA(object):
         else:
             return 'FAIL' 
 
-r = ['ab*ab*']
-q = 0
+r = ['(a|b)*(b|a)*abb', '((ε|a)b*)*', '(.|;)*-/.(.|;)*','(x|t)+((a|m)?)+','("(.(;(.;(.|;)+)*)*)*)']
+sim = [['bbabb', 'babb', 'aaaaaaaaaabbbbbbabababababababababababababbb', 'abb'],
+       ['', 'a', 'aba', 'abba'],
+       ['.;-/.', '-/..;', '-/.', ';;;;;;;......;.;.;.;.;.;.;./.;.;.;.;.;'],
+       ['x', 'txm', 'ma', 'a'],
+       ['".;.;.', '".;.;;.', '".;.;', '','".;;.']]
+
+q = 4
 re_list = {'basic':r[q], 'regular':r[q]+'#'}
 re = re_list['basic']
 re_r = re_list['regular']
@@ -371,7 +397,7 @@ print('---------------------------')
 nfa = NFA()
 fda = FDA()
 
-w = 'aabb'
+
 nfa.thompson(postfix)
 
 # states, nodes, transitions, etc. NFA in a nutshell
@@ -381,20 +407,22 @@ a,b = fda.subConstruct(transitions, acc_st)
 print('NFA')
 print('-----------------------------------------------------------')
 print('NFA set →',nfa.get_standarized_trans())
-print('W =',w,' → Simulation Status:',fda.afn_simulation(w))
 print('-----------------------------------------------------------')
 print('FDA')
 print('-----------------------------------------------------------')
 print('Subconstruction DFA Set →',b)
-print('W =',w,' → Simulation Status:',fda.afd_simulation(w,b))
 print('-----------------------------------------------------------')
 fda.graph(b)
 print('Subconstruction DFA Set Minimized →',fda.minimize_afd(),'States',fda.initial)
-print('W =',w,' → Simulation Status:',fda.afd_simulation(w,fda.minimize_afd()))
 print('-----------------------------------------------------------')
 fda.graph(fda.minimize_afd())
 print('Regular Postfix:',postfix_r)
 print('Direct FDA Construction →',fda.regular_toAFD(postfix_r))
-print('W =',w,' → Simulation Status:',fda.afd_simulation(w,fda.regular_toAFD(postfix_r)))
 print('-----------------------------------------------------------')
 fda.graph(fda.regular_toAFD(postfix_r))
+
+for w in sim[q]:
+    print('W =',w,' → NFA set Simulation Status:',fda.afn_simulation(w))
+    print('W =',w,' → Subconstruction DFA Set Simulation Status:',fda.afd_simulation(w,b))
+    print('W =',w,' → Subconstruction DFA Set Minimized Simulation Status:',fda.afd_simulation(w,fda.minimize_afd()))
+    print('W =',w,' → Direct FDA Construction Simulation Status:',fda.afd_simulation(w,fda.regular_toAFD(postfix_r)))

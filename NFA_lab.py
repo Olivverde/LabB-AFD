@@ -31,11 +31,11 @@ class Libs(object):
                             
                         aux.insert(0,chr)
                     aux_str = ''.join(aux)
-                    new_str = '('+str(aux_str)+'|ε)' #(x|ε)
+                    new_str = '('+str(aux_str)+'|ϕ)' #(x|ε)
                     translation.append(new_str)
                 else:
                 
-                    new_str = '('+str(chr)+'|ε)'
+                    new_str = '('+str(chr)+'|ϕ)'
                     translation.append(new_str)
                 
             elif e == '+':
@@ -64,6 +64,10 @@ class Libs(object):
                 e = 'ϰ'
                 translation.append(e)
             
+            elif e == 'ε':
+                self.dicc['ϕ'] = e
+                e = 'ϕ'
+                translation.append(e)
             
             
             else:
